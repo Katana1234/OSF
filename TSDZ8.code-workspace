@@ -32,7 +32,13 @@
         "java.project.sourcePaths": [
             "tools\\Java_Configurator_Source\\src"
         ],
-        "java.project.referencedLibraries": []
+        "java.project.referencedLibraries": [],
+        "clangd.arguments": [
+            "--query-driver=${config:modustoolbox.toolsPath}/gcc/bin/arm-none-eabi-gcc",
+            "--log=verbose",
+            "--background-index",
+            "--compile-commands-dir=${workspaceFolder}/build"
+        ]
     },
     "extensions": {
         "recommendations": [ "marus25.cortex-debug", "ms-vscode.cpptools", "dan-c-underwood.arm" ]
