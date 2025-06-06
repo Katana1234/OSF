@@ -1934,24 +1934,24 @@ static uint8_t toffset_cycle_counter = 0;
 			ui8_adc_torque_rotation_reset = 1 ; // will force also a reset in the motor.c irq to be safe and reset rpm counter
 		}
 
-		// get adc pedal torque
-		// by default we use ui16_adc_torque_filtered (calculated in motor.c irq)
-		// when cadence is high enough, we use the max between actual value, actual rotation and previous rotation
-		ui16_adc_pedal_torque = ui16_adc_torque_filtered;
-		#define PEDAL_CADENCE_MIN_FOR_USING_ROTATION 30
-		if (ui8_pedal_cadence_RPM > PEDAL_CADENCE_MIN_FOR_USING_ROTATION) { 
-			if ( ui16_adc_pedal_torque < ui16_adc_torque_actual_rotation) ui16_adc_pedal_torque = ui16_adc_torque_actual_rotation ;
-			if ( ui16_adc_pedal_torque < ui16_adc_torque_previous_rotation) ui16_adc_pedal_torque = ui16_adc_torque_previous_rotation ;
-		} else {
-			ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
-		}
-		// static uint8_t ui8_counter;
-
-		// switch (ui8_counter++ & 50) {
-		// 	case 0: 
-		// 		ui16_adc_pedal_torque = filter(ui16_adc_torque_filtered, ui16_adc_pedal_torque, 5);
-		// 		break;
+		// // get adc pedal torque
+		// // by default we use ui16_adc_torque_filtered (calculated in motor.c irq)
+		// // when cadence is high enough, we use the max between actual value, actual rotation and previous rotation
+		// ui16_adc_pedal_torque = ui16_adc_torque_filtered;
+		// #define PEDAL_CADENCE_MIN_FOR_USING_ROTATION 30
+		// if (ui8_pedal_cadence_RPM > PEDAL_CADENCE_MIN_FOR_USING_ROTATION) { 
+		// 	if ( ui16_adc_pedal_torque < ui16_adc_torque_actual_rotation) ui16_adc_pedal_torque = ui16_adc_torque_actual_rotation ;
+		// 	if ( ui16_adc_pedal_torque < ui16_adc_torque_previous_rotation) ui16_adc_pedal_torque = ui16_adc_torque_previous_rotation ;
+		// } else {
+		// 	ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
 		// }
+		static uint8_t ui8_counter;
+
+		switch (ui8_counter++ & 50) {
+			case 0: 
+				ui16_adc_pedal_torque = filter(ui16_adc_torque_filtered, ui16_adc_pedal_torque, 5);
+				break;
+		}
 	}
 
 	// here we know the ui16_adc_pedal_torque but we still have to take care of 
