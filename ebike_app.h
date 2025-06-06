@@ -81,6 +81,7 @@ uint16_t read_battery_soc(void);
 void fillRxBuffer();
 void uart_receive_package();
 void uart_send_package();
+void uart_send_package2();
 
 
 #endif /* _EBIKE_APP_H_ */

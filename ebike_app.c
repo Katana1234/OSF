@@ -231,7 +231,10 @@ uint8_t ui8_temp_celcius = 0;
 #define RX_CHECK_CODE					(UART_RX_BUFFER_LEN - 1)															
 #define UART_TX_BUFFER_LEN				9
 #define TX_CHECK_CODE					(UART_TX_BUFFER_LEN - 1)
+#define UART_TX2_BUFFER_LEN				15
+#define TX2_CHECK_CODE					(UART_TX2_BUFFER_LEN - 1)
 #define TX_STX							0x43
+#define TX2_STX							0x46
 #define RX_STX							0x59
 //uint8_t ui8_state_machine = 0; // 0= not yet a start byte , 1 = accumulate 
 uint32_t rxIdx = 0;
@@ -245,6 +248,7 @@ volatile uint8_t ui8_received_package_flag = 0;
 volatile uint8_t ui8_rx_buffer[UART_RX_BUFFER_LEN];
 volatile uint8_t ui8_rx_counter = 0;
 volatile uint8_t ui8_tx_buffer[UART_TX_BUFFER_LEN];
+volatile uint8_t ui8_tx2_buffer[UART_TX2_BUFFER_LEN];
 volatile uint8_t ui8_byte_received;
 volatile uint8_t ui8_state_machine = 0;
 
@@ -508,6 +512,7 @@ void ebike_app_controller(void) // is called every 25ms by main()
 			break;
 		case 2:
 			uart_send_package();
+			uart_send_package2();
 			break;
 		case 3:
 			check_system();
@@ -1940,6 +1945,13 @@ static uint8_t toffset_cycle_counter = 0;
 		} else {
 			ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
 		}
+		// static uint8_t ui8_counter;
+
+		// switch (ui8_counter++ & 50) {
+		// 	case 0: 
+		// 		ui16_adc_pedal_torque = filter(ui16_adc_torque_filtered, ui16_adc_pedal_torque, 5);
+		// 		break;
+		// }
 	}
 
 	// here we know the ui16_adc_pedal_torque but we still have to take care of 
@@ -3950,3 +3962,37 @@ uint16_t calc_battery_soc_x10(uint16_t ui16_battery_soc_offset_x10, uint16_t ui1
 	
 	return ui16_battery_soc_calc_temp_x10;
 }
+
+void uart_send_package2() {
+	uint8_t ui8_i;
+	uint8_t ui8_tx_check_code;
+  
+	// display ready
+	if (ui8_display_ready_flag) {
+	  // send the data to the LCD
+	  // start up byte
+	  ui8_tx2_buffer[0] = TX2_STX;
+  
+	  // power
+	  uint16_t ui16_battery_power_x20 = ui16_battery_power_x10 * 2;
+	  if (ui16_battery_power_x20 < 200) { ui16_battery_power_x20 = 0; }
+	  ui8_tx2_buffer[9] = (uint8_t)(ui16_battery_power_x20 & 0xFF);
+	  ui8_tx2_buffer[10] = (uint8_t)(ui16_battery_power_x20 >> 8);
+  
+	  // torque	  
+	  ui8_tx2_buffer[13] = (uint8_t)(ui16_adc_pedal_torque / (uint16_t)1); //(uint8_t)(ui16_adc_pedal_torque_delta / (uint16_t)10);
+  
+	  // prepare check code of the package
+	  ui8_tx_check_code = 0x00;
+	  for (ui8_i = 0; ui8_i < TX2_CHECK_CODE; ui8_i++) {
+		ui8_tx_check_code += ui8_tx2_buffer[ui8_i];
+	  }
+	  ui8_tx2_buffer[TX2_CHECK_CODE] = ui8_tx_check_code;
+	  // send the buffer on uart
+	  if ((30 - XMC_USIC_CH_TXFIFO_GetLevel(CYBSP_DEBUG_UART_HW)) >= 16) { // check if there is enough free space in Txfifo
+		for (uint8_t i = 0; i < 15; i++) {
+		  XMC_USIC_CH_TXFIFO_PutData(CYBSP_DEBUG_UART_HW, (uint16_t)ui8_tx2_buffer[i]);
+		}
+	  }
+	}
+  }
