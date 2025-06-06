@@ -1852,6 +1852,46 @@ int expo(int x, int k)
 }
 
 
+// AVERAGING
+
+#define TORQUE_BUFFER_SIZE 35
+
+// Only needed if not already defined in your environment
+// typedef unsigned short uint16_t;
+// typedef unsigned long  uint32_t;
+// typedef unsigned int   size_t;
+
+static uint16_t torqueBuffer[TORQUE_BUFFER_SIZE];
+static size_t torqueBuffer_index = 0;
+static size_t torqueBuffer_count = 0;
+
+// void resetTorqueBuffer() {
+//     for (size_t i = 0; i < TORQUE_BUFFER_SIZE; ++i) {
+//         torqueBuffer[i] = 0;
+//     }
+//     torqueBuffer_index = 0;
+//     torqueBuffer_count = 0;
+// }
+
+void addToTorqueBuffer(uint16_t value) {
+    torqueBuffer[torqueBuffer_index] = value;
+    torqueBuffer_index = (torqueBuffer_index + 1) % TORQUE_BUFFER_SIZE;
+    if (torqueBuffer_count < TORQUE_BUFFER_SIZE) {
+        torqueBuffer_count++;
+    }
+}
+
+uint16_t getAverageTorque() {
+    if (torqueBuffer_count == 0) return 0;
+
+    uint32_t sum = 0;
+    for (size_t i = 0; i < torqueBuffer_count; ++i) {
+        sum += torqueBuffer[i];
+    }
+    return (uint16_t)(sum / torqueBuffer_count);
+}
+// AVERAGING
+
 #define TOFFSET_CYCLES 120 // 3sec (25ms*120)
 static uint8_t toffset_cycle_counter = 0;
 // get_pedal_torque has been totally rewrittent for TSDZ8 (do not update based on TSDZ2)
@@ -1938,20 +1978,58 @@ static uint8_t toffset_cycle_counter = 0;
 		// // by default we use ui16_adc_torque_filtered (calculated in motor.c irq)
 		// // when cadence is high enough, we use the max between actual value, actual rotation and previous rotation
 		// ui16_adc_pedal_torque = ui16_adc_torque_filtered;
-		// #define PEDAL_CADENCE_MIN_FOR_USING_ROTATION 30
-		// if (ui8_pedal_cadence_RPM > PEDAL_CADENCE_MIN_FOR_USING_ROTATION) { 
-		// 	if ( ui16_adc_pedal_torque < ui16_adc_torque_actual_rotation) ui16_adc_pedal_torque = ui16_adc_torque_actual_rotation ;
-		// 	if ( ui16_adc_pedal_torque < ui16_adc_torque_previous_rotation) ui16_adc_pedal_torque = ui16_adc_torque_previous_rotation ;
-		// } else {
-		// 	ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
-		// }
-		static uint8_t ui8_counter;
-
-		switch (ui8_counter++ & 50) {
-			case 0: 
-				ui16_adc_pedal_torque = filter(ui16_adc_torque_filtered, ui16_adc_pedal_torque, 5);
-				break;
+		#define PEDAL_CADENCE_MIN_FOR_USING_ROTATION 30
+		if (ui8_pedal_cadence_RPM > PEDAL_CADENCE_MIN_FOR_USING_ROTATION) { 
+			// if ( ui16_adc_pedal_torque < ui16_adc_torque_actual_rotation) ui16_adc_pedal_torque = ui16_adc_torque_actual_rotation ;
+			// if ( ui16_adc_pedal_torque < ui16_adc_torque_previous_rotation) ui16_adc_pedal_torque = ui16_adc_torque_previous_rotation ;
+		} else {
+			ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
 		}
+		// static uint8_t ui8_counter;
+
+		// switch (ui8_counter++ & 100) {
+		// 	case 0: 
+		// 		ui16_adc_pedal_torque = filter(ui16_adc_torque_filtered, ui16_adc_pedal_torque, 5);
+		// 		break;
+		// }
+
+		uint16_t torqueDiff = abs(ui16_adc_torque_filtered - ui16_adc_pedal_torque);
+		uint8_t pushFactor = 1;
+		if(torqueDiff < 125)
+		{
+			pushFactor = 1;
+		}
+		else if(torqueDiff < 175)
+		{
+			pushFactor = 2;
+		}
+		else if(torqueDiff < 200)
+		{
+			pushFactor = 4;
+		}
+		else if(torqueDiff < 250)
+		{
+			pushFactor = 6;
+		}
+		else if(torqueDiff < 350)
+		{
+			pushFactor = 8;
+		}
+		else if(torqueDiff < 1000)
+		{
+			pushFactor = 1;
+		}
+		else{
+			pushFactor = 0;
+		}
+
+		for(int i = 0;i<pushFactor;i++){
+			addToTorqueBuffer(ui16_adc_torque_filtered);
+		}
+
+		
+		ui16_adc_pedal_torque = getAverageTorque();
+
 	}
 
 	// here we know the ui16_adc_pedal_torque but we still have to take care of 
@@ -1959,6 +2037,8 @@ static uint8_t toffset_cycle_counter = 0;
 	// - some kind of exponential
 	// - remap in order to have a max range of 160 (value used by TSDZ2
 	// calculate the delta value from calibration
+
+	ui8_adc_pedal_torque_range_adj = 20;
 
 	// calculate ui16_adc_pedal_torque_delta to remap 	
 	if (ui16_adc_pedal_torque > ui16_adc_pedal_torque_offset ) {
