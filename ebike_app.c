@@ -495,7 +495,7 @@ void ebike_app_controller(void) // is called every 25ms by main()
     ui8_battery_current_filtered_x10 = (uint8_t)(((uint16_t)(ui8_adc_battery_current_filtered * (uint8_t)BATTERY_CURRENT_PER_10_BIT_ADC_STEP_X100)) / 10U);
 	
 	// get pedal torque ; calculate ui16_pedal_torque_x100 and ui16_human_power_x10 (human power)
-	get_pedal_torque();
+	// get_pedal_torque(); // moved to 10ms routine
 	
 	// send/receive data, ebike control lights, calc oem wheelspeed, 
 	// check system, check battery soc, every 4 cycles (25ms * 4)	
@@ -550,6 +550,11 @@ void ebike_app_controller(void) // is called every 25ms by main()
 	#endif
 }
 
+void ebike_app_controller2(void) // is called every 10ms by main()
+{	
+	// get pedal torque ; calculate ui16_pedal_torque_x100 and ui16_human_power_x10 (human power)
+	get_pedal_torque();	
+}
 
 static void ebike_control_motor(void) // is called every 25ms by ebike_app_controller()
 {
@@ -1854,24 +1859,19 @@ int expo(int x, int k)
 
 // AVERAGING
 
-#define TORQUE_BUFFER_SIZE 35
-
-// Only needed if not already defined in your environment
-// typedef unsigned short uint16_t;
-// typedef unsigned long  uint32_t;
-// typedef unsigned int   size_t;
+#define TORQUE_BUFFER_SIZE 100 // 1sec (10ms*100)
 
 static uint16_t torqueBuffer[TORQUE_BUFFER_SIZE];
 static size_t torqueBuffer_index = 0;
 static size_t torqueBuffer_count = 0;
 
-// void resetTorqueBuffer() {
-//     for (size_t i = 0; i < TORQUE_BUFFER_SIZE; ++i) {
-//         torqueBuffer[i] = 0;
-//     }
-//     torqueBuffer_index = 0;
-//     torqueBuffer_count = 0;
-// }
+void resetTorqueBuffer() {
+    for (size_t i = 0; i < TORQUE_BUFFER_SIZE; ++i) {
+        torqueBuffer[i] = 0;
+    }
+    torqueBuffer_index = 0;
+    torqueBuffer_count = 0;
+}
 
 void addToTorqueBuffer(uint16_t value) {
     torqueBuffer[torqueBuffer_index] = value;
@@ -1892,8 +1892,8 @@ uint16_t getAverageTorque() {
 }
 // AVERAGING
 
-#define TOFFSET_CYCLES 120 // 3sec (25ms*120)
-static uint8_t toffset_cycle_counter = 0;
+#define TOFFSET_CYCLES 300 // 3sec (10ms*300)
+static uint16_t toffset_cycle_counter = 0;
 // get_pedal_torque has been totally rewrittent for TSDZ8 (do not update based on TSDZ2)
  static void get_pedal_torque(void)
 {
@@ -1986,6 +1986,12 @@ static uint8_t toffset_cycle_counter = 0;
 			ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
 		}
 		
+		// if (ui8_pedal_cadence_RPM < 5)
+		// { 
+		// 	// low cadence -> immediately clearing the buffer to have a quick stopping reaction
+		// 	resetTorqueBuffer();
+		// } 
+
 		uint16_t torqueDiff = abs(ui16_adc_torque_filtered - ui16_adc_pedal_torque);
 		uint8_t pushFactor = 1;
 		if(torqueDiff < 125)
@@ -2012,14 +2018,15 @@ static uint8_t toffset_cycle_counter = 0;
 		{
 			pushFactor = 1;
 		}
-		else{
+		else
+		{
 			pushFactor = 0;
 		}
 
-		for(int i = 0;i<pushFactor;i++){
+		for(int i = 0;i<pushFactor;i++)
+		{
 			addToTorqueBuffer(ui16_adc_torque_filtered);
 		}
-
 		
 		ui16_adc_pedal_torque = getAverageTorque();
 

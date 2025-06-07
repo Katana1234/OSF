@@ -50,6 +50,7 @@ uint32_t loop_25ms_ticks = 0;
 uint32_t start = 0 ; // mainly for debugging ; allow to print some variable every e.g. 5 sec
 */
 uint16_t last_clock_ticks = 0;
+uint16_t last_clock_ticks2 = 0;
 uint16_t last_system_ticks = 0;
 volatile uint32_t system_ticks2 = 0;
 
@@ -362,6 +363,7 @@ int main(void)
 
    // init the clock timer
    last_clock_ticks = XMC_CCU4_SLICE_GetTimerValue(HALL_SPEED_TIMER_HW) ; 
+   last_clock_ticks2 = last_clock_ticks;
    last_system_ticks = last_clock_ticks;
 //***************************** while ************************************
     while (1) // main loop
@@ -397,6 +399,11 @@ int main(void)
         if ( temp_interval > 6250){ // 25000 usec / 4usec = 6250
             last_clock_ticks = temp_ticks;
             ebike_app_controller();  // this performs some checks and update some variable every 25 msec
+        }
+        uint16_t temp_interval2 = temp_ticks - last_clock_ticks2;
+        if ( temp_interval2 > 2500){ // 10000 usec / 4usec = 2500
+            last_clock_ticks2 = temp_ticks;
+            ebike_app_controller2();  // running every 10 msec
         }
    
         #if (uCPROBE_GUI_OSCILLOSCOPE == MY_ENABLED)

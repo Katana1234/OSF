@@ -68,6 +68,7 @@ extern uint8_t ui8_best_ref_angles6 ;
 extern uint8_t ui8_adc_battery_current_max;
 
 void ebike_app_controller(void);
+void ebike_app_controller2(void);
 struct_configuration_variables* get_configuration_variables(void);
 
 void ebike_app_init(void);
