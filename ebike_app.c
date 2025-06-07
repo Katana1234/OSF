@@ -2037,8 +2037,6 @@ static uint8_t toffset_cycle_counter = 0;
 	// - remap in order to have a max range of 160 (value used by TSDZ2
 	// calculate the delta value from calibration
 
-	ui8_adc_pedal_torque_range_adj = 20;
-
 	// calculate ui16_adc_pedal_torque_delta to remap 	
 	if (ui16_adc_pedal_torque > ui16_adc_pedal_torque_offset ) {
 		// calculate the raw delta value
