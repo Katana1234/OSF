@@ -1854,7 +1854,7 @@ int expo(int x, int k)
 
 // AVERAGING
 
-#define TORQUE_BUFFER_SIZE 35
+#define TORQUE_BUFFER_SIZE 40
 
 // Only needed if not already defined in your environment
 // typedef unsigned short uint16_t;
@@ -1865,13 +1865,13 @@ static uint16_t torqueBuffer[TORQUE_BUFFER_SIZE];
 static size_t torqueBuffer_index = 0;
 static size_t torqueBuffer_count = 0;
 
-// void resetTorqueBuffer() {
-//     for (size_t i = 0; i < TORQUE_BUFFER_SIZE; ++i) {
-//         torqueBuffer[i] = 0;
-//     }
-//     torqueBuffer_index = 0;
-//     torqueBuffer_count = 0;
-// }
+void resetTorqueBuffer() {
+    for (size_t i = 0; i < TORQUE_BUFFER_SIZE; ++i) {
+        torqueBuffer[i] = 0;
+    }
+    torqueBuffer_index = 0;
+    torqueBuffer_count = 0;
+}
 
 void addToTorqueBuffer(uint16_t value) {
     torqueBuffer[torqueBuffer_index] = value;
@@ -1986,6 +1986,12 @@ static uint8_t toffset_cycle_counter = 0;
 			ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
 		}
 		
+		if (ui8_pedal_cadence_RPM == 0U)
+		{ 
+			// low cadence -> immediately clearing the buffer to have a quick stopping reaction
+			resetTorqueBuffer();
+		}
+
 		uint16_t torqueDiff = abs(ui16_adc_torque_filtered - ui16_adc_pedal_torque);
 		uint8_t pushFactor = 1;
 		if(torqueDiff < 125)
@@ -2002,11 +2008,11 @@ static uint8_t toffset_cycle_counter = 0;
 		}
 		else if(torqueDiff < 250)
 		{
-			pushFactor = 6;
+			pushFactor = 8;
 		}
 		else if(torqueDiff < 350)
 		{
-			pushFactor = 8;
+			pushFactor = 16;
 		}
 		else if(torqueDiff < 1000)
 		{
