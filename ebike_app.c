@@ -1985,14 +1985,7 @@ static uint8_t toffset_cycle_counter = 0;
 		} else {
 			ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
 		}
-		// static uint8_t ui8_counter;
-
-		// switch (ui8_counter++ & 100) {
-		// 	case 0: 
-		// 		ui16_adc_pedal_torque = filter(ui16_adc_torque_filtered, ui16_adc_pedal_torque, 5);
-		// 		break;
-		// }
-
+		
 		uint16_t torqueDiff = abs(ui16_adc_torque_filtered - ui16_adc_pedal_torque);
 		uint8_t pushFactor = 1;
 		if(torqueDiff < 125)
