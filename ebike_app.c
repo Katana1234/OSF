@@ -1854,12 +1854,7 @@ int expo(int x, int k)
 
 // AVERAGING
 
-#define TORQUE_BUFFER_SIZE 40
-
-// Only needed if not already defined in your environment
-// typedef unsigned short uint16_t;
-// typedef unsigned long  uint32_t;
-// typedef unsigned int   size_t;
+#define TORQUE_BUFFER_SIZE 40 // 1sec (25ms*40)
 
 static uint16_t torqueBuffer[TORQUE_BUFFER_SIZE];
 static size_t torqueBuffer_index = 0;
@@ -1986,47 +1981,49 @@ static uint8_t toffset_cycle_counter = 0;
 			ui8_adc_torque_rotation_reset = 1 ; // will force also a reset of torque rotation in the motor.c irq 
 		}
 		
+		// no cadence -> immediately clearing the buffer to have a quicker starting / stopping reaction
 		if (ui8_pedal_cadence_RPM == 0U)
-		{ 
-			// low cadence -> immediately clearing the buffer to have a quick stopping reaction
+		{ 			
 			resetTorqueBuffer();
 		}
 
+		// calculating the absolute difference between the last and current torque reading
 		uint16_t torqueDiff = abs(ui16_adc_torque_filtered - ui16_adc_pedal_torque);
-		uint8_t pushFactor = 1;
-		if(torqueDiff < 125)
+		uint8_t pushFactor = 0;
+		// the pushFactor determines how many times the new value will be pushed to the array
+		// this way, "low torque changes" will affect the average slower then "high torque changes"
+		// this will keep the average stable at "low torque input"
+		if(torqueDiff <= 125) // 0 - 125
 		{
 			pushFactor = 1;
 		}
-		else if(torqueDiff < 175)
+		else if(torqueDiff <= 175) // 126 - 175
 		{
 			pushFactor = 2;
 		}
-		else if(torqueDiff < 200)
+		else if(torqueDiff <= 200) // 176 - 200
 		{
 			pushFactor = 4;
 		}
-		else if(torqueDiff < 250)
+		else if(torqueDiff <= 250) // 201 - 250
 		{
 			pushFactor = 8;
 		}
-		else if(torqueDiff < 350)
+		else if(torqueDiff <= 350) // 251 - 350
 		{
 			pushFactor = 16;
 		}
-		else if(torqueDiff < 1000)
+		else // super high values even possible? even if -> let's kinda ignore these peaks
 		{
 			pushFactor = 1;
-		}
-		else{
-			pushFactor = 0;
-		}
+		}		
 
+		// adding the value to the array x times
 		for(int i = 0;i<pushFactor;i++){
 			addToTorqueBuffer(ui16_adc_torque_filtered);
 		}
-
 		
+		// getting the average value for the main logic
 		ui16_adc_pedal_torque = getAverageTorque();
 
 	}
