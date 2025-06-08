@@ -82,6 +82,7 @@ void fillRxBuffer();
 void uart_receive_package();
 void uart_send_package();
 void uart_send_package2();
+void uart_send_package_custom();
 
 
 #endif /* _EBIKE_APP_H_ */

@@ -233,8 +233,11 @@ uint8_t ui8_temp_celcius = 0;
 #define TX_CHECK_CODE					(UART_TX_BUFFER_LEN - 1)
 #define UART_TX2_BUFFER_LEN				15
 #define TX2_CHECK_CODE					(UART_TX2_BUFFER_LEN - 1)
+#define UART_TX3_BUFFER_LEN				10
+#define TX3_CHECK_CODE					(UART_TX3_BUFFER_LEN - 1)
 #define TX_STX							0x43
 #define TX2_STX							0x46
+#define TX3_STX							0x49
 #define RX_STX							0x59
 //uint8_t ui8_state_machine = 0; // 0= not yet a start byte , 1 = accumulate 
 uint32_t rxIdx = 0;
@@ -249,6 +252,7 @@ volatile uint8_t ui8_rx_buffer[UART_RX_BUFFER_LEN];
 volatile uint8_t ui8_rx_counter = 0;
 volatile uint8_t ui8_tx_buffer[UART_TX_BUFFER_LEN];
 volatile uint8_t ui8_tx2_buffer[UART_TX2_BUFFER_LEN];
+volatile uint8_t ui8_tx3_buffer[UART_TX3_BUFFER_LEN];
 volatile uint8_t ui8_byte_received;
 volatile uint8_t ui8_state_machine = 0;
 
@@ -512,7 +516,8 @@ void ebike_app_controller(void) // is called every 25ms by main()
 			break;
 		case 2:
 			uart_send_package();
-			uart_send_package2();
+			// uart_send_package2();
+			uart_send_package_custom();
 			break;
 		case 3:
 			check_system();
@@ -4063,9 +4068,52 @@ void uart_send_package2() {
 	  }
 	  ui8_tx2_buffer[TX2_CHECK_CODE] = ui8_tx_check_code;
 	  // send the buffer on uart
-	  if ((30 - XMC_USIC_CH_TXFIFO_GetLevel(CYBSP_DEBUG_UART_HW)) >= 16) { // check if there is enough free space in Txfifo
-		for (uint8_t i = 0; i < 15; i++) {
+	  if ((30 - XMC_USIC_CH_TXFIFO_GetLevel(CYBSP_DEBUG_UART_HW)) >= UART_TX2_BUFFER_LEN + 1) { // check if there is enough free space in Txfifo
+		for (uint8_t i = 0; i < UART_TX2_BUFFER_LEN; i++) {
 		  XMC_USIC_CH_TXFIFO_PutData(CYBSP_DEBUG_UART_HW, (uint16_t)ui8_tx2_buffer[i]);
+		}
+	  }
+	}
+  }
+
+  void uart_send_package_custom() {
+	uint8_t ui8_i;
+	uint8_t ui8_tx_check_code;
+  
+	// display ready
+	if (ui8_display_ready_flag) {
+	  // send the data to the LCD
+	  // start up byte
+	  ui8_tx3_buffer[0] = TX3_STX;
+  
+	  // power
+	  uint16_t ui16_battery_power_x20 = ui16_battery_power_x10 * 2;
+	  if (ui16_battery_power_x20 < 200) { ui16_battery_power_x20 = 0; }
+	  ui8_tx3_buffer[1] = (uint8_t)(ui16_battery_power_x20 & 0xFF);
+	  ui8_tx3_buffer[2] = (uint8_t)(ui16_battery_power_x20 >> 8);
+  
+	  // torque	  
+	  ui8_tx3_buffer[3] = (uint8_t)(ui16_adc_pedal_torque & 0xFF);
+	  ui8_tx3_buffer[4] = (uint8_t)(ui16_adc_pedal_torque >> 8);
+
+	   // torque_delta
+	  ui8_tx3_buffer[5] = (uint8_t)(ui16_adc_pedal_torque_delta & 0xFF);
+	  ui8_tx3_buffer[6] = (uint8_t)(ui16_adc_pedal_torque_delta >> 8);
+  
+	  // battery soc percentage
+	  ui8_tx3_buffer[7] = (uint8_t)(ui16_battery_SOC_percentage_x10 & 0xFF);
+	  ui8_tx3_buffer[8] = (uint8_t)(ui16_battery_SOC_percentage_x10 >> 8);
+
+	  // prepare check code of the package
+	  ui8_tx_check_code = 0x00;
+	  for (ui8_i = 0; ui8_i < TX3_CHECK_CODE; ui8_i++) {
+		ui8_tx_check_code += ui8_tx3_buffer[ui8_i];
+	  }
+	  ui8_tx3_buffer[TX3_CHECK_CODE] = ui8_tx_check_code;
+	  // send the buffer on uart
+	  if ((30 - XMC_USIC_CH_TXFIFO_GetLevel(CYBSP_DEBUG_UART_HW)) >= UART_TX3_BUFFER_LEN + 1) { // check if there is enough free space in Txfifo
+		for (uint8_t i = 0; i < UART_TX3_BUFFER_LEN; i++) {
+		  XMC_USIC_CH_TXFIFO_PutData(CYBSP_DEBUG_UART_HW, (uint16_t)ui8_tx3_buffer[i]);
 		}
 	  }
 	}
