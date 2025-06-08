@@ -233,7 +233,7 @@ uint8_t ui8_temp_celcius = 0;
 #define TX_CHECK_CODE					(UART_TX_BUFFER_LEN - 1)
 #define UART_TX2_BUFFER_LEN				15
 #define TX2_CHECK_CODE					(UART_TX2_BUFFER_LEN - 1)
-#define UART_TX3_BUFFER_LEN				10
+#define UART_TX3_BUFFER_LEN				12
 #define TX3_CHECK_CODE					(UART_TX3_BUFFER_LEN - 1)
 #define TX_STX							0x43
 #define TX2_STX							0x46
@@ -4096,13 +4096,22 @@ void uart_send_package2() {
 	  ui8_tx3_buffer[3] = (uint8_t)(ui16_adc_pedal_torque & 0xFF);
 	  ui8_tx3_buffer[4] = (uint8_t)(ui16_adc_pedal_torque >> 8);
 
-	   // torque_delta
+	   // torque_delta_calc
 	  ui8_tx3_buffer[5] = (uint8_t)(ui16_adc_pedal_torque_delta & 0xFF);
 	  ui8_tx3_buffer[6] = (uint8_t)(ui16_adc_pedal_torque_delta >> 8);
+
+	  // torque_delta_true
+	  uint16_t ui16_adc_pedal_torque_delta_true = 0;
+	  if (ui16_adc_pedal_torque > ui16_adc_pedal_torque_offset ) 
+	  {
+		ui16_adc_pedal_torque_delta_true = ui16_adc_pedal_torque - ui16_adc_pedal_torque_offset;
+	  }
+	  ui8_tx3_buffer[7] = (uint8_t)(ui16_adc_pedal_torque_delta_true & 0xFF);
+	  ui8_tx3_buffer[8] = (uint8_t)(ui16_adc_pedal_torque_delta_true >> 8);
   
 	  // battery soc percentage
-	  ui8_tx3_buffer[7] = (uint8_t)(ui16_battery_SOC_percentage_x10 & 0xFF);
-	  ui8_tx3_buffer[8] = (uint8_t)(ui16_battery_SOC_percentage_x10 >> 8);
+	  ui8_tx3_buffer[9] = (uint8_t)(ui16_battery_SOC_percentage_x10 & 0xFF);
+	  ui8_tx3_buffer[10] = (uint8_t)(ui16_battery_SOC_percentage_x10 >> 8);
 
 	  // prepare check code of the package
 	  ui8_tx_check_code = 0x00;
