@@ -1859,7 +1859,7 @@ int expo(int x, int k)
 
 // AVERAGING
 
-#define TORQUE_BUFFER_SIZE 40 // 1sec (25ms*40)
+#define TORQUE_BUFFER_SIZE 35 // 875ms (25ms*35)
 
 static uint16_t torqueBuffer[TORQUE_BUFFER_SIZE];
 static size_t torqueBuffer_index = 0;
