@@ -1859,7 +1859,7 @@ int expo(int x, int k)
 
 // AVERAGING
 
-#define TORQUE_BUFFER_SIZE 35 // 875ms (25ms*35)
+#define TORQUE_BUFFER_SIZE 25 // 875ms (25ms*35)
 
 static uint16_t torqueBuffer[TORQUE_BUFFER_SIZE];
 static size_t torqueBuffer_index = 0;
@@ -1987,7 +1987,7 @@ static uint8_t toffset_cycle_counter = 0;
 		}
 		
 		// no cadence -> immediately clearing the buffer to have a quicker starting / stopping reaction
-		if (ui8_pedal_cadence_RPM == 0U)
+		if (ui8_pedal_cadence_RPM == 0U || ui16_adc_torque_filtered <= ui16_adc_pedal_torque_offset_min)
 		{ 			
 			resetTorqueBuffer();
 		}
@@ -2041,6 +2041,27 @@ static uint8_t toffset_cycle_counter = 0;
 
 	// calculate ui16_adc_pedal_torque_delta to remap 	
 	if (ui16_adc_pedal_torque > ui16_adc_pedal_torque_offset ) {
+
+		// getting the current pas level (hardcoded logic for EKD01 => "m_config.assist_level_5_mode == BEFORE_ECO")
+		int curPas = 0;		
+		switch(ui8_assist_level){
+			case ECO:
+				if(ui8_assist_level_5_flag == 1){
+					curPas = 1;
+				}
+				else{
+					curPas = 2;
+				}				
+			break;
+			case TOUR: curPas = 3; break;
+			case SPORT: curPas = 4; break;
+			case TURBO: curPas = 5; break;
+		}
+		
+		// applying expo according to the selected pas level
+		// the 20 + 20 calculation is only written down for an easier understanding of what it does
+		ui8_adc_pedal_torque_range_adj = 20 + 20 - (4 * curPas); // should be configurable somehow
+
 		// calculate the raw delta value
 		ui16_adc_pedal_torque_delta_to_remap = ui16_adc_pedal_torque - ui16_adc_pedal_torque_offset;
 		// apply expo : value to remap must be scaled 1024 (so <<10) and 
