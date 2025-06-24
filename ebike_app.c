@@ -233,7 +233,7 @@ uint8_t ui8_temp_celcius = 0;
 #define TX_CHECK_CODE					(UART_TX_BUFFER_LEN - 1)
 #define UART_TX2_BUFFER_LEN				15
 #define TX2_CHECK_CODE					(UART_TX2_BUFFER_LEN - 1)
-#define UART_TX3_BUFFER_LEN				12
+#define UART_TX3_BUFFER_LEN				14
 #define TX3_CHECK_CODE					(UART_TX3_BUFFER_LEN - 1)
 #define TX_STX							0x43
 #define TX2_STX							0x46
@@ -4133,6 +4133,12 @@ void uart_send_package2() {
 	  // battery soc percentage
 	  ui8_tx3_buffer[9] = (uint8_t)(ui16_battery_SOC_percentage_x10 & 0xFF);
 	  ui8_tx3_buffer[10] = (uint8_t)(ui16_battery_SOC_percentage_x10 >> 8);
+
+	  // scu temp
+	  ui8_tx3_buffer[11] = ui8_temp_celcius;
+
+	  // cadence
+	  ui8_tx3_buffer[12] = ui8_pedal_cadence_RPM;
 
 	  // prepare check code of the package
 	  ui8_tx_check_code = 0x00;
