@@ -233,7 +233,7 @@ uint8_t ui8_temp_celcius = 0;
 #define TX_CHECK_CODE					(UART_TX_BUFFER_LEN - 1)
 #define UART_TX2_BUFFER_LEN				15
 #define TX2_CHECK_CODE					(UART_TX2_BUFFER_LEN - 1)
-#define UART_TX3_BUFFER_LEN				14
+#define UART_TX3_BUFFER_LEN				16
 #define TX3_CHECK_CODE					(UART_TX3_BUFFER_LEN - 1)
 #define TX_STX							0x43
 #define TX2_STX							0x46
@@ -4139,6 +4139,15 @@ void uart_send_package2() {
 
 	  // cadence
 	  ui8_tx3_buffer[12] = ui8_pedal_cadence_RPM;
+
+	  // ADC temperature sensor
+	  uint16_t adc_val_tmp = (XMC_VADC_GROUP_GetResult(vadc_0_group_1_HW , VADC_POT_RESULT_REG ) & 0x0FFF) >> 2; // throttle gr1 ch7 result 7  in bg  p2.5	
+      float voltage_mV = (adc_val_tmp * 5.0 * 1000.0) / 1024.0;
+      float temperature_C = (voltage_mV - 500.0) / 10.0;
+      if (temperature_C < 0) temperature_C = 0;
+      if (temperature_C > 255) temperature_C = 255;
+      uint8_t tmp = (uint8_t)(temperature_C + 0.5f);
+	  ui8_tx3_buffer[13] = tmp;
 
 	  // prepare check code of the package
 	  ui8_tx_check_code = 0x00;
